@@ -119,15 +119,14 @@ int main(void) {
 		*/
 		// +++++++++++++++++++++++++
 
-		IVC* image = vc_image_new(video.width, video.height, 3, 256);
-		IVC* image2 = vc_image_new(video.width, video.height, 3, 256);
+		IVC* image = newImage(video.width, video.height, 3, 256);
+		IVC* image2 = newImage(video.width, video.height, 3, 256);
 		memcpy(image->data, frame.data, video.width* video.height * 3);
 		//memcpy(image2->data, frame.data, video.width* video.height * 3);
-		vc_rgb_to_gray(image);
-		vc_gray_to_binary_threshold(image,image2,120);
+		rgbToGray(image, image2);
 		memcpy(frame.data, image2->data, video.width* video.height * 3);
-		vc_image_free(image);
-		vc_image_free(image2);
+		freeImage(image);
+		freeImage(image2);
 
 		/* Exibe a frame */
 		cv::imshow("VC - VIDEO", frame);
