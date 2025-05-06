@@ -124,6 +124,7 @@ int main(void) {
 		memcpy(image->data, frame.data, video.width* video.height * 3);
 		//memcpy(image2->data, frame.data, video.width* video.height * 3);
 		rgbToGray(image, image2);
+		grayToBinaryTreshold(image, image2, 100);
 		memcpy(frame.data, image2->data, video.width* video.height * 3);
 		freeImage(image);
 		freeImage(image2);

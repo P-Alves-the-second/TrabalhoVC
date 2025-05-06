@@ -78,3 +78,28 @@ int rgbToGray(IVC* src, IVC* dst)
 	}
 	return 0;
 }
+
+int grayToBinaryTreshold(IVC* src, IVC* dst, int threshold)
+{
+	int pos = 0;
+	for (int y = 0; y < src->height; y++)
+	{
+		for (int x = 0; x < src->width; x++)
+		{
+			pos = y * src->bytesperline + x * src->channels;
+			int posDst = y * dst->bytesperline + x * dst->channels;
+			if (src->data[pos] < threshold)
+			{
+				dst->data[posDst] = 0;
+				dst->data[posDst + 1] = 0;
+				dst->data[posDst + 2] = 0;
+			}
+			else
+			{
+				dst->data[posDst] = 255;
+				dst->data[posDst + 1] = 255;
+				dst->data[posDst + 2] = 255;
+			}
+		}
+	}
+}

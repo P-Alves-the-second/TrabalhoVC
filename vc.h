@@ -18,4 +18,5 @@ IVC* freeImage(IVC* image);
 IVC* newImage(int width, int height, int channels, int levels);
 
 int rgbToGray(IVC* src, IVC* dst);
+int grayToBinaryTreshold(IVC* src, IVC* dst, int threshold);
 

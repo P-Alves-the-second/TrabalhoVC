@@ -1,8 +1,2 @@
-﻿  functions.c
-C:\Users\pedro\Project5\TrabalhoVC\functions.c(68,25): warning C4244: '=': conversão de 'double' para 'float', possível perda de dados
-C:\Users\pedro\Project5\TrabalhoVC\functions.c(69,31): warning C4244: '=': conversão de 'double' para 'float', possível perda de dados
-C:\Users\pedro\Project5\TrabalhoVC\functions.c(70,30): warning C4244: '=': conversão de 'double' para 'float', possível perda de dados
-C:\Users\pedro\Project5\TrabalhoVC\functions.c(74,24): warning C4244: '=': conversão de 'float' para 'unsigned char', possível perda de dados
-C:\Users\pedro\Project5\TrabalhoVC\functions.c(75,28): warning C4244: '=': conversão de 'float' para 'unsigned char', possível perda de dados
-C:\Users\pedro\Project5\TrabalhoVC\functions.c(76,28): warning C4244: '=': conversão de 'float' para 'unsigned char', possível perda de dados
+﻿  main.cpp
   Project5.vcxproj -> C:\Users\pedro\Project5\TrabalhoVC\x64\Debug\Project5.exe
