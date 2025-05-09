@@ -36,6 +36,8 @@ void vc_timer(void) {
 int main(void) {
 	// Vídeo
 	char videofile[20] = "video1.mp4";
+	OVC* blobs;
+	int nLabels = 0;
 	cv::VideoCapture capture;
 	struct
 	{
@@ -89,21 +91,6 @@ int main(void) {
 		/* Número da frame a processar */
 		video.nframe = (int)capture.get(cv::CAP_PROP_POS_FRAMES);
 
-		/* Exemplo de inserção texto na frame */
-		str = std::string("RESOLUCAO: ").append(std::to_string(video.width)).append("x").append(std::to_string(video.height));
-		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
-		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
-		str = std::string("TOTAL DE FRAMES: ").append(std::to_string(video.ntotalframes));
-		cv::putText(frame, str, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
-		cv::putText(frame, str, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
-		str = std::string("FRAME RATE: ").append(std::to_string(video.fps));
-		cv::putText(frame, str, cv::Point(20, 75), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
-		cv::putText(frame, str, cv::Point(20, 75), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
-		str = std::string("N. DA FRAME: ").append(std::to_string(video.nframe));
-		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
-		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
-
-
 		// Faça o seu código aqui...
 		/*
 		// Cria uma nova imagem IVC
@@ -121,13 +108,46 @@ int main(void) {
 
 		IVC* image = newImage(video.width, video.height, 3, 256);
 		IVC* image2 = newImage(video.width, video.height, 3, 256);
+		IVC* original = newImage(video.width, video.height, 3, 256);
 		memcpy(image->data, frame.data, video.width* video.height * 3);
+		memcpy(original->data, frame.data, video.width* video.height * 3);
 		//memcpy(image2->data, frame.data, video.width* video.height * 3);
 		rgbToGray(image, image2);
 		grayToBinaryTreshold(image, image2, 100);
-		memcpy(frame.data, image2->data, video.width* video.height * 3);
+		binaryDilate(image2, image, 5);
+		binaryErode(image, image2, 17);
+		blobs = binaryBlobLabelling(image2, image, &nLabels);
+		blobs = blobAreaPerimeter(image, blobs, nLabels);
+		blobs = blobCentroid(image, blobs, &nLabels);
+		blobs = blobBoundingBox(image, blobs, &nLabels);
+		for(int i = 0;i < nLabels;i++)
+		{
+			printf("Label: %d\n", blobs[i].label);
+			printf("Area: %d\n", blobs[i].area);
+			printf("Perimetro: %d\n", blobs[i].perimeter);
+			printf("Centro de massa: (%d,%d)\n", blobs[i].xc, blobs[i].yc);
+			printf("Bounding box: (%d,%d) (%d,%d)\n", blobs[i].x, blobs[i].y, blobs[i].width, blobs[i].height);
+		}
+		drawBoundingBoxAndCentroid(original, blobs, nLabels);
+		printf("N. de blobs: %d\n", nLabels);
+		memcpy(frame.data, original->data, video.width* video.height * 3);
 		freeImage(image);
 		freeImage(image2);
+
+		/* Exemplo de inserção texto na frame */
+		str = std::string("RESOLUCAO: ").append(std::to_string(video.width)).append("x").append(std::to_string(video.height));
+		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+		cv::putText(frame, str, cv::Point(20, 25), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+		str = std::string("TOTAL DE FRAMES: ").append(std::to_string(video.ntotalframes));
+		cv::putText(frame, str, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+		cv::putText(frame, str, cv::Point(20, 50), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+		str = std::string("FRAME RATE: ").append(std::to_string(video.fps));
+		cv::putText(frame, str, cv::Point(20, 75), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+		cv::putText(frame, str, cv::Point(20, 75), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+		str = std::string("N. DA FRAME: ").append(std::to_string(video.nframe));
+		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 0), 2);
+		cv::putText(frame, str, cv::Point(20, 100), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 1);
+
 
 		/* Exibe a frame */
 		cv::imshow("VC - VIDEO", frame);
