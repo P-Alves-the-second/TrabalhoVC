@@ -36,8 +36,12 @@ void vc_timer(void) {
 int main(void) {
 	// Vídeo
 	char videofile[20] = "video1.mp4";
-	OVC* blobs;
+	OVC* blobs = NULL;
+	OVC* newBlobs = NULL;
 	int nLabels = 0;
+	int newNLabels = 0;
+	float total = 0;
+	int framer = 0;
 	cv::VideoCapture capture;
 	struct
 	{
@@ -105,34 +109,70 @@ int main(void) {
 		vc_image_free(image);
 		*/
 		// +++++++++++++++++++++++++
-
+		framer++;
+		//printf("Frame: %d\n", framer);
 		IVC* image = newImage(video.width, video.height, 3, 256);
 		IVC* image2 = newImage(video.width, video.height, 3, 256);
 		IVC* original = newImage(video.width, video.height, 3, 256);
+
 		memcpy(image->data, frame.data, video.width* video.height * 3);
 		memcpy(original->data, frame.data, video.width* video.height * 3);
 		//memcpy(image2->data, frame.data, video.width* video.height * 3);
 		rgbToGray(image, image2);
 		grayToBinaryTreshold(image, image2, 100);
 		binaryDilate(image2, image, 5);
-		binaryErode(image, image2, 17);
-		blobs = binaryBlobLabelling(image2, image, &nLabels);
-		blobs = blobAreaPerimeter(image, blobs, nLabels);
-		blobs = blobCentroid(image, blobs, &nLabels);
-		blobs = blobBoundingBox(image, blobs, &nLabels);
-		for(int i = 0;i < nLabels;i++)
+		binaryErode(image, image2, 21);
+		newBlobs = binaryBlobLabelling(image2,image,&newNLabels);
+
+		for(int i = 0;i < newNLabels;i++)
 		{
-			printf("Label: %d\n", blobs[i].label);
-			printf("Area: %d\n", blobs[i].area);
-			printf("Perimetro: %d\n", blobs[i].perimeter);
-			printf("Centro de massa: (%d,%d)\n", blobs[i].xc, blobs[i].yc);
-			printf("Bounding box: (%d,%d) (%d,%d)\n", blobs[i].x, blobs[i].y, blobs[i].width, blobs[i].height);
+			newBlobs[i].counted = 0;
 		}
-		drawBoundingBoxAndCentroid(original, blobs, nLabels);
-		printf("N. de blobs: %d\n", nLabels);
+		newBlobs = blobAreaPerimeter(image, newBlobs, newNLabels);
+		newBlobs = blobCentroid(image, newBlobs, &newNLabels);
+		newBlobs = blobBoundingBox(image, newBlobs, &newNLabels);
+		checkCoinCounted(blobs, newBlobs, &nLabels, &newNLabels);
+		newBlobs = detectCoinsByArea(original,newBlobs, newNLabels);
+		drawBoundingBoxAndCentroid(original, newBlobs, newNLabels);
+
+		for(int i = 0;i < newNLabels;i++)
+		{
+			if (newBlobs[i].counted != 1 && newBlobs[i].value != 0)
+			{
+				total += newBlobs[i].value;
+				newBlobs[i].counted = 1;
+				printf("%f\n",newBlobs[i].value);
+			}
+		}
+
+		for(int i = 0;i < newNLabels; i++)
+		{
+
+			if (newBlobs[i].yc > 200 && newBlobs[i].yc < original->height - 200 && newBlobs[i].counted != 1)
+			{
+				/*printf("Label: %d\n", newBlobs[i].label);
+				printf("Area: %d\n", newBlobs[i].area);
+				printf("Perimetro: %d\n", newBlobs[i].perimeter);
+				printf("Centro de massa: (%d,%d)\n", newBlobs[i].xc, newBlobs[i].yc);*/
+			}
+			//printf("Bounding box: (%d,%d) (%d,%d)\n", newBlobs[i].x, newBlobs[i].y, newBlobs[i].width, newBlobs[i].height);
+			if (newBlobs[i].counted == 1)
+			{
+				//printf("Valor: %.2f\n", newBlobs[i].value);
+			}
+			else
+			{
+				//printf("Valor: 0.00\n");
+			}
+		}
+		//printf("Total: %.2f\n", total);
 		memcpy(frame.data, original->data, video.width* video.height * 3);
 		freeImage(image);
 		freeImage(image2);
+		blobs = copyBlobs(newBlobs, newNLabels);
+		free(newBlobs);
+		nLabels = newNLabels;
+
 
 		/* Exemplo de inserção texto na frame */
 		str = std::string("RESOLUCAO: ").append(std::to_string(video.width)).append("x").append(std::to_string(video.height));

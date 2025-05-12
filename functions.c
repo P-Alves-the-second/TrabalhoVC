@@ -102,7 +102,7 @@ int grayToBinaryTreshold(IVC* src, IVC* dst, int threshold)
 		}
 	}
 }
-OVC* binaryBlobLabelling(IVC* src, IVC* dst, int* nLabels)
+OVC* binaryBlobLabelling(IVC* src, IVC* dst, int* newNLabels)
 {
 	int label = 1;
 	int maxLabels = src->width * src->height / 4; // Estimativa conservadora
@@ -124,39 +124,42 @@ OVC* binaryBlobLabelling(IVC* src, IVC* dst, int* nLabels)
 	{
 		for (int x = 0; x < src->width; x++)
 		{
-			pos = y * src->bytesperline + x * src->channels;
-			posA = (y - 1) * src->bytesperline + (x - 1) * src->channels;
-			posB = (y - 1) * src->bytesperline + x * src->channels;
-			posC = (y - 1) * src->bytesperline + (x + 1) * src->channels;
-			posD = y * src->bytesperline + (x - 1) * src->channels;
-
-			if (src->data[pos] != 0)
+			if(y > 50 && y < src->height-50 && x > 50 && x < src->width-50)
 			{
-				// Verifica limites para evitar acesso inválido
-				if (y == 0 || x == 0 || x == src->width - 1) posA = posB = posC = posD = -1;
+				pos = y * src->bytesperline + x * src->channels;
+				posA = (y - 1) * src->bytesperline + (x - 1) * src->channels;
+				posB = (y - 1) * src->bytesperline + x * src->channels;
+				posC = (y - 1) * src->bytesperline + (x + 1) * src->channels;
+				posD = y * src->bytesperline + (x - 1) * src->channels;
 
-				min = 255;
-				if (posA >= 0 && dst->data[posA] != 0 && dst->data[posA] < min) min = dst->data[posA];
-				if (posB >= 0 && dst->data[posB] != 0 && dst->data[posB] < min) min = dst->data[posB];
-				if (posC >= 0 && dst->data[posC] != 0 && dst->data[posC] < min) min = dst->data[posC];
-				if (posD >= 0 && dst->data[posD] != 0 && dst->data[posD] < min) min = dst->data[posD];
+				if (src->data[pos] != 0)
+				{
+					// Verifica limites para evitar acesso inválido
+					if (y == 0 || x == 0 || x == src->width - 1) posA = posB = posC = posD = -1;
 
-				// Novo blob detectado
-				if (min == 255)
-				{
-					dst->data[pos] = label;
-					labelTable[label] = label;
-					label++;
-				}
-				else // Propaga o rótulo mínimo
-				{
-					dst->data[pos] = min;
-					// Mescla os rótulos se necessário
-					for (int i = 1; i < label; i++)
+					min = 255;
+					if (posA >= 0 && dst->data[posA] != 0 && dst->data[posA] < min) min = dst->data[posA];
+					if (posB >= 0 && dst->data[posB] != 0 && dst->data[posB] < min) min = dst->data[posB];
+					if (posC >= 0 && dst->data[posC] != 0 && dst->data[posC] < min) min = dst->data[posC];
+					if (posD >= 0 && dst->data[posD] != 0 && dst->data[posD] < min) min = dst->data[posD];
+
+					// Novo blob detectado
+					if (min == 255)
 					{
-						if (labelTable[i] == dst->data[posA] || labelTable[i] == dst->data[posB] || labelTable[i] == dst->data[posC] || labelTable[i] == dst->data[posD])
+						dst->data[pos] = label;
+						labelTable[label] = label;
+						label++;
+					}
+					else // Propaga o rótulo mínimo
+					{
+						dst->data[pos] = min;
+						// Mescla os rótulos se necessário
+						for (int i = 1; i < label; i++)
 						{
-							labelTable[i] = min;
+							if (labelTable[i] == dst->data[posA] || labelTable[i] == dst->data[posB] || labelTable[i] == dst->data[posC] || labelTable[i] == dst->data[posD])
+							{
+								labelTable[i] = min;
+							}
 						}
 					}
 				}
@@ -164,33 +167,47 @@ OVC* binaryBlobLabelling(IVC* src, IVC* dst, int* nLabels)
 		}
 	}
 
-	// Atualiza os rótulos para usar uma sequência contínua
-	*nLabels = 0;
+	// Remove rótulos repetidos (compactação)
+	int* uniqueLabels = (int*)malloc(label * sizeof(int));
+	int newLabelCount = 0;
 	for (int i = 1; i < label; i++)
 	{
-		if (labelTable[i] != 0)
+		int currentLabel = labelTable[i];
+		int isUnique = 1;
+		for (int j = 0; j < newLabelCount; j++)
 		{
-			labelTable[*nLabels] = labelTable[i];
-			(*nLabels)++;
+			if (uniqueLabels[j] == currentLabel)
+			{
+				isUnique = 0;
+				break;
+			}
+		}
+		if (isUnique)
+		{
+			uniqueLabels[newLabelCount++] = currentLabel;
 		}
 	}
+	*newNLabels = newLabelCount;
 
 	// Aloca memória para os blobs identificados
-	OVC* blobs = (OVC*)calloc(*nLabels, sizeof(OVC));
-	if (blobs != NULL)
+	OVC* newBlobs = (OVC*)calloc(*newNLabels, sizeof(OVC));
+	if (newBlobs != NULL)
 	{
-		for (int i = 0; i < *nLabels; i++)
+		for (int i = 0; i < *newNLabels; i++)
 		{
-			blobs[i].label = labelTable[i];
+			newBlobs[i].label = uniqueLabels[i];
 		}
 	}
 	else
 	{
 		free(labelTable);
+		free(uniqueLabels);
 		return NULL;
 	}
+
 	free(labelTable);
-	return blobs;
+	free(uniqueLabels);
+	return newBlobs;
 }
 
 OVC* blobAreaPerimeter(IVC* src, OVC* blobs, int nLabels)
@@ -479,4 +496,89 @@ int binaryErode(IVC* src, IVC* dst, int kernel)
 	}
 
 	return 0;  // Indicate successful completion
+}
+double distanceBetweenPoints(int x1, int y1, int x2, int y2)
+{
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	return sqrt(dx * dx + dy * dy);
+}
+// Função para copiar blobs
+OVC* copyBlobs(OVC* srcBlobs, int nLabels) {
+	if (srcBlobs == NULL || nLabels <= 0) {
+		return NULL;
+	}
+
+	// Aloca memória para a nova lista de blobs
+	OVC* dstBlobs = (OVC*)malloc(nLabels * sizeof(OVC));
+	if (dstBlobs == NULL) {
+		printf("Erro ao alocar memória para a cópia dos blobs.\n");
+		return NULL;
+	}
+
+	// Copia os dados
+	memcpy(dstBlobs, srcBlobs, nLabels * sizeof(OVC));
+
+	return dstBlobs;
+}
+
+void checkCoinCounted(OVC* blobs, OVC* newBlobs, int* nLabels, int* newNLabels) {
+	if (*nLabels < 0) return;
+	for (int i = 0; i < *nLabels; i++) {
+		for (int j = 0; j < *newNLabels; j++) {
+			if (blobs != NULL && newBlobs != NULL) {
+				if (distanceBetweenPoints(blobs[i].xc, blobs[i].yc, newBlobs[j].xc, newBlobs[j].yc) < 50) {
+					// Verifica se a moeda já foi contada em algum frame anterior
+					if (blobs[i].counted == 1)
+					{
+						newBlobs[j].counted = 1;
+						//printf("aaaaaaa");
+					}
+				}
+			}
+		}
+	}
+}
+
+OVC* detectCoinsByArea(IVC* src, OVC* blobs, int nLabels) {
+	float valor = 0;
+	for (int i = 0; i < nLabels; i++) {
+		int area = blobs[i].area;
+		int perimeter = blobs[i].perimeter;
+		if (blobs[i].counted == 0 && blobs[i].yc > 200 && blobs[i].yc < src->height - 200) {
+			// Verificação combinada de área e perímetro
+			if (area > 7000 && area < 8000 && perimeter > 400 && perimeter < 450) {
+				blobs[i].value = 0.01f; // Moeda de 1 cent
+			}
+			else if (area >= 9000 && area < 10000 && perimeter >= 450 && perimeter < 500) {
+				blobs[i].value = 0.02f; // Moeda de 2 cents
+			}
+			else if (area >= 12500 && area < 13500 && perimeter >= 500 && perimeter < 550) {
+				blobs[i].value = 0.05f; // Moeda de 5 cents
+			}
+			else if (area >= 11000 && area < 12000 && perimeter >= 500 && perimeter < 550) {
+				blobs[i].value = 0.10f; // Moeda de 10 cents
+			}
+			else if (area >= 14000 && area < 14500 && perimeter >= 550 && perimeter < 600) {
+				blobs[i].value = 0.20f; // Moeda de 20 cents
+			}
+			else if (area >= 18000 && area < 19000 && perimeter >= 600 && perimeter < 650) {
+				blobs[i].value = 0.50f; // Moeda de 50 cents
+			}
+			else if (area >= 15000 && area < 16000 && perimeter >= 600 && perimeter < 650) {
+				blobs[i].value = 1.00f; // Moeda de 1 euro
+			}
+			else if (area >= 19000 && area < 20000 && perimeter >= 650 && perimeter < 700) {
+				blobs[i].value = 2.00f; // Moeda de 2 euros
+			}
+		}
+		if (blobs[i].counted == true)
+		{
+			src->data[blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels] = 255;
+			src->data[blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels + 1] = 0;
+			src->data[blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels + 2] = 0;
+		}
+	}
+
+	return blobs;
 }
