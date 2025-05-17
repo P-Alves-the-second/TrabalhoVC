@@ -25,7 +25,6 @@ OVC* blobBoundingBox(IVC* src, OVC* blobs, int* nLabels);
 OVC* blobCentroid(IVC* src, OVC* blobs, int* nLabels);
 OVC* copyBlobs(OVC* srcBlobs, int nLabels);
 
-int rgbToGray(IVC* src, IVC* dst);
 OVC* detectCoinsByArea(IVC* src, OVC* blobs, int nLabels);
 int grayToBinaryTreshold(IVC* src, IVC* dst, int threshold);
 int binaryDilate(IVC* src, IVC* dst, int kernel);
@@ -33,7 +32,6 @@ int binaryErode(IVC* src, IVC* dst, int kernel);
 void drawBoundingBoxAndCentroid(IVC* image, OVC* blobs, int nLabels);
 void checkCoinCounted(OVC* blobs, OVC* newBlobs, int* nLabels, int* newNLabels);
 double distanceBetweenPoints(int x1, int y1, int x2, int y2);
-void freeBlobs(OVC* blobs, int nLabels);
 
 
 

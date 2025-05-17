@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -35,13 +37,15 @@ void vc_timer(void) {
 
 int main(void) {
 	// Vídeo
-	char videofile[20] = "video1.mp4";
+	char videofile[20] = "video2.mp4";
 	OVC* blobs = NULL;
 	OVC* newBlobs = NULL;
 	int nLabels = 0;
 	int newNLabels = 0;
 	float total = 0;
 	int framer = 0;
+	int modeas[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+	float valores[] = { 0.01f, 0.02f, 0.05f, 0.10f, 0.20f, 0.50f, 1.00f, 2.00f };
 	cv::VideoCapture capture;
 	struct
 	{
@@ -95,44 +99,32 @@ int main(void) {
 		/* Número da frame a processar */
 		video.nframe = (int)capture.get(cv::CAP_PROP_POS_FRAMES);
 
-		// Faça o seu código aqui...
-		/*
-		// Cria uma nova imagem IVC
-		IVC *image = vc_image_new(video.width, video.height, 3, 256);
-		// Copia dados de imagem da estrutura cv::Mat para uma estrutura IVC
-		memcpy(image->data, frame.data, video.width * video.height * 3);
-		// Executa uma função da nossa biblioteca vc
-		vc_rgb_get_green(image);
-		// Copia dados de imagem da estrutura IVC para uma estrutura cv::Mat
-		memcpy(frame.data, image->data, video.width * video.height * 3);
-		// Liberta a memória da imagem IVC que havia sido criada
-		vc_image_free(image);
-		*/
-		// +++++++++++++++++++++++++
 		framer++;
 		//printf("Frame: %d\n", framer);
 		IVC* image = newImage(video.width, video.height, 3, 256);
-		IVC* image2 = newImage(video.width, video.height, 3, 256);
+		IVC* gray = newImage(video.width, video.height, 3, 256);
+		IVC* binary = newImage(video.width, video.height, 3, 256);
+		IVC* dilateted = newImage(video.width, video.height, 3, 256);
+		IVC* eroded = newImage(video.width, video.height, 3, 256);
+		IVC* labeled = newImage(video.width, video.height, 3, 256);
 		IVC* original = newImage(video.width, video.height, 3, 256);
 
 		memcpy(image->data, frame.data, video.width* video.height * 3);
 		memcpy(original->data, frame.data, video.width* video.height * 3);
-		//memcpy(image2->data, frame.data, video.width* video.height * 3);
-		rgbToGray(image, image2);
-		grayToBinaryTreshold(image, image2, 100);
-		binaryDilate(image2, image, 5);
-		binaryErode(image, image2, 21);
-		newBlobs = binaryBlobLabelling(image2,image,&newNLabels);
+		grayToBinaryTreshold(original, binary, 100);
+		binaryDilate(binary, dilateted, 3);
+		binaryErode(dilateted, eroded, 19);
+		newBlobs = binaryBlobLabelling(eroded,labeled,&newNLabels);
 
 		for(int i = 0;i < newNLabels;i++)
 		{
 			newBlobs[i].counted = 0;
 		}
-		newBlobs = blobAreaPerimeter(image, newBlobs, newNLabels);
-		newBlobs = blobCentroid(image, newBlobs, &newNLabels);
-		newBlobs = blobBoundingBox(image, newBlobs, &newNLabels);
+		newBlobs = blobAreaPerimeter(labeled, newBlobs, newNLabels);
+		newBlobs = blobCentroid(labeled, newBlobs, &newNLabels);
+		newBlobs = blobBoundingBox(labeled, newBlobs, &newNLabels);
 		checkCoinCounted(blobs, newBlobs, &nLabels, &newNLabels);
-		newBlobs = detectCoinsByArea(original,newBlobs, newNLabels);
+		newBlobs = detectCoinsByArea(original, newBlobs, newNLabels);
 		drawBoundingBoxAndCentroid(original, newBlobs, newNLabels);
 
 		for(int i = 0;i < newNLabels;i++)
@@ -142,33 +134,45 @@ int main(void) {
 				total += newBlobs[i].value;
 				newBlobs[i].counted = 1;
 				printf("%f\n",newBlobs[i].value);
+				if (newBlobs[i].value == 0.01f)
+				{
+					modeas[0]++;
+				}
+				else if (newBlobs[i].value == 0.02f)
+				{
+					modeas[1]++;
+				}
+				else if (newBlobs[i].value == 0.05f)
+				{
+					modeas[2]++;
+				}
+				else if (newBlobs[i].value == 0.10f)
+				{
+					modeas[3]++;
+				}
+				else if (newBlobs[i].value == 0.20f)
+				{
+					modeas[4]++;
+				}
+				else if (newBlobs[i].value == 0.50f)
+				{
+					modeas[5]++;
+				}
+				else if (newBlobs[i].value == 1.00f)
+				{
+					modeas[6]++;
+				}
+				else if (newBlobs[i].value == 2.00f)
+				{
+					modeas[7]++;
+				}
 			}
 		}
 
-		for(int i = 0;i < newNLabels; i++)
-		{
-
-			if (newBlobs[i].yc > 200 && newBlobs[i].yc < original->height - 200 && newBlobs[i].counted != 1)
-			{
-				/*printf("Label: %d\n", newBlobs[i].label);
-				printf("Area: %d\n", newBlobs[i].area);
-				printf("Perimetro: %d\n", newBlobs[i].perimeter);
-				printf("Centro de massa: (%d,%d)\n", newBlobs[i].xc, newBlobs[i].yc);*/
-			}
-			//printf("Bounding box: (%d,%d) (%d,%d)\n", newBlobs[i].x, newBlobs[i].y, newBlobs[i].width, newBlobs[i].height);
-			if (newBlobs[i].counted == 1)
-			{
-				//printf("Valor: %.2f\n", newBlobs[i].value);
-			}
-			else
-			{
-				//printf("Valor: 0.00\n");
-			}
-		}
 		//printf("Total: %.2f\n", total);
 		memcpy(frame.data, original->data, video.width* video.height * 3);
 		freeImage(image);
-		freeImage(image2);
+
 		blobs = copyBlobs(newBlobs, newNLabels);
 		free(newBlobs);
 		nLabels = newNLabels;
@@ -196,6 +200,13 @@ int main(void) {
 		key = cv::waitKey(1);
 	}
 
+	for(int i = 0; i < 8; i++){
+		if (modeas[i] != 0)
+		{
+			printf("Moeda de %.2f: %d\n", valores[i], modeas[i]);
+		}
+	}
+	printf("Total: %.2f\n", total);
 	/* Para o timer e exibe o tempo decorrido */
 	vc_timer();
 

@@ -50,34 +50,6 @@ IVC* freeImage(IVC* image)
 	return image;
 }
 
-int rgbToGray(IVC* src, IVC* dst)
-{
-	float red, green, blue, med;
-
-	if (src->channels != 3 || dst->channels != 3) return -1;
-	if (src->width != dst->width || src->height != dst->height) return -1;
-	if (src == NULL) return -1;
-	if (dst == NULL) return -1;
-	
-	for (int x = 0; x < src->width; x++)
-	{
-		for (int y = 0; y < src->height; y++)
-		{
-			int pos = x * src->channels + y * src->bytesperline;
-
-			red = src->data[pos] * 0.299;
-			green = src->data[pos + 1] * 0.587;
-			blue = src->data[pos + 2] * 0.114;
-			med = (red + blue + green);
-
-			int posDst = x * dst->channels + y * dst->bytesperline;
-			dst->data[posDst] = med;
-			dst->data[posDst + 1] = med;
-			dst->data[posDst + 2] = med;
-		}
-	}
-	return 0;
-}
 int grayToBinaryTreshold(IVC* src, IVC* dst, int threshold)
 {
 	int pos = 0;
@@ -503,7 +475,7 @@ double distanceBetweenPoints(int x1, int y1, int x2, int y2)
 	int dy = y2 - y1;
 	return sqrt(dx * dx + dy * dy);
 }
-// Função para copiar blobs
+
 OVC* copyBlobs(OVC* srcBlobs, int nLabels) {
 	if (srcBlobs == NULL || nLabels <= 0) {
 		return NULL;
@@ -545,40 +517,37 @@ OVC* detectCoinsByArea(IVC* src, OVC* blobs, int nLabels) {
 	for (int i = 0; i < nLabels; i++) {
 		int area = blobs[i].area;
 		int perimeter = blobs[i].perimeter;
+		int pos = blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels;
 		if (blobs[i].counted == 0 && blobs[i].yc > 200 && blobs[i].yc < src->height - 200) {
 			// Verificação combinada de área e perímetro
-			if (area > 7000 && area < 8000 && perimeter > 400 && perimeter < 450) {
-				blobs[i].value = 0.01f; // Moeda de 1 cent
+			if (area > 5000 && area < 8000 && perimeter > 350 && perimeter < 410) {
+				if (src->data[pos+2] > 50)blobs[i].value = 0.01f; // Moeda de 1 cent
 			}
 			else if (area >= 9000 && area < 10000 && perimeter >= 450 && perimeter < 500) {
 				blobs[i].value = 0.02f; // Moeda de 2 cents
 			}
-			else if (area >= 12500 && area < 13500 && perimeter >= 500 && perimeter < 550) {
-				blobs[i].value = 0.05f; // Moeda de 5 cents
+			else if (area >= 12500 && area < 13000 && perimeter >= 500 && perimeter < 550) {
+				blobs[i].value = 0.05f; // Moeda de 5 cents				
 			}
-			else if (area >= 11000 && area < 12000 && perimeter >= 500 && perimeter < 550) {
+			else if (area >= 10000 && area < 11000 && perimeter >= 450 && perimeter < 505) {
 				blobs[i].value = 0.10f; // Moeda de 10 cents
+			
 			}
-			else if (area >= 14000 && area < 14500 && perimeter >= 550 && perimeter < 600) {
-				blobs[i].value = 0.20f; // Moeda de 20 cents
+			else if (area >= 13000 && area < 14500 && perimeter >= 550 && perimeter < 650) {
+				blobs[i].value = 0.20f; // Moeda de 20 cents		
 			}
-			else if (area >= 18000 && area < 19000 && perimeter >= 600 && perimeter < 650) {
-				blobs[i].value = 0.50f; // Moeda de 50 cents
+			else if (area >= 17000 && area < 18000 && perimeter >= 600 && perimeter < 650) {			
+				if(src->data[pos] > 50 )blobs[i].value = 0.50f; // Moeda de 50 cents
 			}
-			else if (area >= 15000 && area < 16000 && perimeter >= 600 && perimeter < 650) {
+			else if (area >= 14500 && area < 15000 && perimeter >= 550 && perimeter < 1200) {
 				blobs[i].value = 1.00f; // Moeda de 1 euro
 			}
-			else if (area >= 19000 && area < 20000 && perimeter >= 650 && perimeter < 700) {
+			else if (area >= 20000 && area < 21000 && perimeter >= 650 && perimeter < 700) {
 				blobs[i].value = 2.00f; // Moeda de 2 euros
 			}
-		}
-		if (blobs[i].counted == true)
-		{
-			src->data[blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels] = 255;
-			src->data[blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels + 1] = 0;
-			src->data[blobs[i].yc * src->bytesperline + blobs[i].xc * src->channels + 2] = 0;
 		}
 	}
 
 	return blobs;
 }
+
